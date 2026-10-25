@@ -20,10 +20,6 @@ Real-time drone and UAV detection for recorded video and live camera feeds. SkyS
 
 <p align="center"><sub>A distant quadcopter detected against a flat overcast sky and labelled <b>Drone/UAV (0.62)</b> — the kind of small, low-contrast, far-range target that single-frame detectors usually miss.</sub></p>
 
-## Why this exists
-
-Perimeter and airspace security increasingly has to answer one question in real time: *is there a drone overhead, and is it a drone or just a bird?* Single-frame object detection handles the first half poorly at distance — a small dark blob is ambiguous — and not at all for the second. SkySentinel addresses both by fusing several detectors for robustness and by analysing each target's trajectory over time to classify intent-bearing flight (straight transits, hovers) against natural flight (wandering, flapping).
-
 ## Capabilities
 
 - **Detector ensemble.** Multiple models run per frame and their outputs are merged with Weighted Boxes Fusion. Agreement between models raises confidence; isolated false positives are suppressed. A minimum-agreement threshold is configurable.
@@ -104,44 +100,6 @@ flowchart LR
     O --> FILE
 ```
 
-## Per-frame processing
-
-Detection is the expensive stage, so it runs on a stride while the tracker carries targets on the frames in between. This keeps the live view fluid without sacrificing continuity.
-
-```mermaid
-flowchart TD
-    A[Incoming frame] --> B{On detection<br/>stride?}
-    B -- yes --> D[Run ensemble<br/>+ box fusion]
-    B -- no --> E[Reuse last<br/>detections]
-    D --> T[Update tracker]
-    E --> T
-    T --> K{Track has<br/>enough history?}
-    K -- yes --> J[Score trajectory<br/>drone / bird / uncertain]
-    K -- no --> P[Mark pending]
-    J --> O[Draw boxes, IDs, HUD]
-    P --> O
-    O --> R[Emit frame + results]
-```
-
-## Drone vs. bird logic
-
-A target's **motion** is far more discriminative than its appearance at range. Each track is scored on the signals below and the result fuses with the detector's label.
-
-```mermaid
-flowchart TD
-    TR[Track history] --> F1[Path straightness]
-    TR --> F2[Speed uniformity]
-    TR --> F3[Heading stability]
-    TR --> F4[Hover ratio]
-    TR --> F5[Vertical oscillation]
-    TR --> F6[Bounding-box stability]
-    F1 & F2 & F3 & F4 & F5 & F6 --> SC[Weighted score 0..1]
-    SC --> DEC{Score}
-    DEC -- high --> DR[Drone]
-    DEC -- low --> BR[Bird]
-    DEC -- middle --> UN[Uncertain]
-```
-
 | Signal | Drone | Bird |
 |---|---|---|
 | Path straightness | straight lines / smooth arcs | wandering |
@@ -208,11 +166,7 @@ sequenceDiagram
 ```bash
 python run.py web                      # http://localhost:5000
 python run.py web --config config.yaml
-```
 
-### Command line
-
-```bash
 # Annotate a recorded clip
 python run.py video --input clip.mp4 --output out.mp4
 
@@ -225,7 +179,7 @@ python run.py video --input clip.mp4 --output out.mp4 --stride 3 --min-support 2
 
 ---
 
-## Performance modes (CLI presets)
+## Performance modes
 
 The dashboard tunes everything with live knobs; the CLI bundles sensible combinations into three presets.
 
@@ -241,69 +195,9 @@ python run.py stream --input rtsp://cam/stream1 --mode fast --max-fps 12
 python run.py video --input clip.mp4 --output out.mp4 --turbo    # fastest: 1 nano model @ 512
 ```
 
-### Making it faster
 
-Detection speed is dominated by **where it runs** and **how big the models are**:
 
-| Lever | Effect |
-|---|---|
-| **Run on a GPU** | Biggest win by far (10–50×). Install a CUDA PyTorch build from pytorch.org; `device: auto` then uses it with FP16 |
-| **Smaller models** | Default is `yolo11s` + `yolov8s`. Drop to a single `yolo11n` (`--turbo`) for maximum speed, or raise to `yolo11m`/`x` for accuracy |
-| **Fewer models** | One model skips the fusion step; two gives the agreement check. Use one for speed |
-| **Lower input size** | 960 → 512 is ~3× fewer pixels |
-| **Higher frame stride** | Detect every 5th frame; the tracker carries targets in between |
-| **ONNX / TensorRT** | Point a model's `weights` at an exported `.onnx` (CPU) or `.engine` (NVIDIA) for a further speedup |
 
-On CPU, prefer `--turbo` (or Fast mode with one nano model) and a higher stride. On a GPU, Balanced or Precise run comfortably in real time.
-
-Processing a **high-FPS input** in Precise mode gives the trajectory classifier more samples per second, which sharpens the drone-vs-bird decision and keeps IDs stable through fast manoeuvres. `--max-fps` (or `target_fps`) caps the rate independently, so you can benchmark throughput or keep several cameras within budget.
-
-## Configuration
-
-Copy `config.example.yaml` to `config.yaml`. Key settings:
-
-| Setting | Purpose |
-|---|---|
-| `mode` | Performance preset: `fast` / `balanced` / `precise` |
-| `device`, `half` | Compute device and FP16 inference |
-| `frame_stride` | Detect every *N*-th frame (throughput) |
-| `target_fps` | Processing FPS cap (0 = uncapped) |
-| `min_support` | Models that must agree before a box is accepted |
-| `fuse_iou`, `nms_iou`, `min_score` | Fusion and filtering thresholds |
-| `trajectory_classify`, `drones_only` | Enable bird/drone scoring; optionally drop birds |
-| `track_*` | Tracker age, IoU gate, confirmation hits |
-| `models`, `cameras` | The detector ensemble and startup cameras |
-
-### Tuning
-
-| Goal | Adjustment |
-|---|---|
-| Higher throughput | increase `frame_stride`, lower `imgsz`, enable `half`, use smaller weights |
-| Fewer false alarms | raise `min_support` to 2 and `min_score`; set `drones_only: true` |
-| Catch smaller / faster targets | lower `conf`, raise `imgsz`, lower `track_min_hits` |
-
----
-
-## Project layout
-
-```
-skysentinel/
-  geometry.py     IoU, NMS, Weighted Boxes Fusion
-  detector.py     YOLO (Ultralytics) wrapper, device / FP16, class filter
-  ensemble.py     Multi-model execution and fusion
-  motion.py       Motion-based fallback detector
-  tracker.py      IoU tracker with confirmed IDs
-  classify.py     Trajectory-based drone/bird classifier
-  sources.py      File / stream / webcam capture
-  pipeline.py     Detect -> track -> classify -> overlay
-  manager.py      Multi-camera workers
-  video.py        File / stream to annotated output
-  overlay.py      Box, ID and HUD rendering
-  config.py       YAML configuration
-app.py            Web dashboard (Flask)
-run.py            Command-line interface
-tests/            33 tests (fusion, tracker, classifier, ensemble, config, pipeline, sources)
-```
 
 ## Testing
 
@@ -313,12 +207,4 @@ pytest
 
 The suite validates box fusion and NMS, tracker identity and ageing, the trajectory classifier (straight → drone, erratic → bird, hover → drone), ensemble support and limits, configuration loading, source classification, and the full detect-track-classify pipeline. It runs on CPU without model downloads.
 
-## Design notes and limitations
 
-- Trajectory classification needs a few frames of history; new tracks report as *pending*.
-- The hardest overlap is soaring or gliding birds against fixed-wing drones, where both move smoothly. Raising `min_support` and requiring sustained evidence reduces misclassification.
-- Motion is measured in image space and is not calibrated to real-world speed. The classifier is structured so that range or altitude from a secondary sensor (radar or stereo) can be added as additional features.
-
-## License
-
-Released under the MIT License.
