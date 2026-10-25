@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+*.egg-info/
+
+# Model weights (download or train; keep out of git)
+*.pt
+*.pth
+*.onnx
+*.engine
+weights/
+
+# Data / runtime
+data/uploads/
+data/output/
+data/samples/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

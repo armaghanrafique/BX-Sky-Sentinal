@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SkySentinel — Live Cameras</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <div class="splash" id="splash">
+    <div class="splash-inner">
+      <div class="splash-mark"></div>
+      <h1 class="splash-title">SKY<span>SENTINEL</span></h1>
+      <div class="splash-sub">Drone &amp; UAV Detection</div>
+      <div class="splash-rule"></div>
+      <div class="splash-barwrap"><div class="splash-bar" id="splashBar"></div></div>
+    </div>
+  </div>
+
+  <header class="bar">
+    <div class="brand">SKY<span>SENTINEL</span></div>
+    <nav><a href="/">Video</a><a href="/live" class="active">Live Cameras</a></nav>
+    <div class="bar-right"><button class="icon-btn" id="sound" title="Alarm sound">🔊</button></div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <div class="section">Connect cameras</div>
+      <div class="row">
+        <input id="user" class="form-input" placeholder="Camera username (e.g. admin)">
+        <input id="pass" class="form-input" type="password" placeholder="Password">
+        <button id="scan" class="btn">Scan network</button>
+      </div>
+      <div id="scanState" class="scanstate"></div>
+      <div id="found" class="found"></div>
+
+      <details class="manual">
+        <summary>Add a camera manually</summary>
+        <div class="row">
+          <input id="camName" class="form-input" placeholder="Name (optional)">
+          <input id="camSrc" class="form-input" placeholder="rtsp:// or rtmp:// link, or a webcam number (0)">
+          <button id="add" class="btn btn-ghost">Add</button>
+        </div>
+      </details>
+    </section>
+
+    <section class="card">
+      <div class="section">Detection</div>
+      <div class="detrow">
+        <div class="field">
+          <span class="lbl">Detection speed</span>
+          <div class="seg" id="engine"></div>
+        </div>
+        <div class="field">
+          <span class="lbl">Sensitivity</span>
+          <input type="range" id="sens" min="0.05" max="0.95" step="0.05">
+          <div class="scale"><span>Fewer alerts</span><span>More alerts</span></div>
+        </div>
+      </div>
+      <div id="engineNote" class="enginenote"></div>
+    </section>
+
+    <section id="grid" class="grid"></section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script>SkySentinel.initLive();</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# SkySentinel dependencies.
+
+# Detection models (YOLOv8 / YOLO11). Install a torch build for your hardware
+# first for GPU acceleration: https://pytorch.org/get-started/locally/
+ultralytics>=8.3.0
+torch>=2.1.0
+torchvision>=0.16.0
+
+# Video I/O, drawing, motion fallback.
+opencv-python>=4.8.0
+numpy>=1.24,<2.0
+
+# Re-encode annotated results to browser-playable H.264 (bundled ffmpeg)
+imageio-ffmpeg>=0.4.9
+
+# Config + web UI.
+pyyaml>=6.0
+flask>=3.0.0
+
+# Network-camera discovery (find ONVIF / RTSP cameras on the LAN by login)
+onvif-zeep>=0.2.12
+wsdiscovery>=2.0
+
+# Optional: faster inference exports
+# onnxruntime-gpu>=1.17.0
+# tensorrt            # for NVIDIA TensorRT engines
+
+# Tests
+pytest>=7.4

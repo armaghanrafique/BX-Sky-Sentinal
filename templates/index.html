@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SkySentinel — Video</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <div class="splash" id="splash">
+    <div class="splash-inner">
+      <div class="splash-mark"></div>
+      <h1 class="splash-title">SKY<span>SENTINEL</span></h1>
+      <div class="splash-sub">Drone &amp; UAV Detection</div>
+      <div class="splash-rule"></div>
+      <div class="splash-barwrap"><div class="splash-bar" id="splashBar"></div></div>
+    </div>
+  </div>
+
+  <header class="bar">
+    <div class="brand">SKY<span>SENTINEL</span></div>
+    <nav><a href="/" class="active">Video</a><a href="/live">Live Cameras</a></nav>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <div class="section">Check a video or image</div>
+      <div id="drop" class="drop">
+        <div>Drop a video or image here, or <b>choose a file</b></div>
+        <div class="fname" id="fname"></div>
+      </div>
+      <input id="file" type="file" accept="video/*,image/*" hidden>
+
+      <div class="detrow">
+        <div class="field">
+          <span class="lbl">Detection speed</span>
+          <div class="seg" id="engine"></div>
+        </div>
+        <div class="field">
+          <span class="lbl">Sensitivity</span>
+          <input type="range" id="sens" min="0.05" max="0.95" step="0.05">
+          <div class="scale"><span>Fewer alerts</span><span>More alerts</span></div>
+        </div>
+      </div>
+
+      <button id="go" class="btn btn-block" disabled>Find drones</button>
+
+      <div id="prog" class="prog hidden">
+        <div class="bar2"><i id="fill"></i></div>
+        <div id="status" class="status"></div>
+      </div>
+
+      <div id="result" class="result hidden">
+        <video id="player" controls playsinline></video>
+        <img id="photo" class="hidden" alt="annotated result">
+        <div class="links"><a id="dl" class="btn btn-ghost" download>Download result</a>
+          <a href="#" id="again">Check another</a></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script>SkySentinel.initUpload();</script>
+</body>
+</html>

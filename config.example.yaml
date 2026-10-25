@@ -1,0 +1,52 @@
+# SkySentinel configuration. Copy to config.yaml and edit, then:
+#   python run.py web --config config.yaml
+
+mode: balanced        # fast | balanced | precise  (sets stride, input size, FPS cap, agreement)
+device: auto          # auto | cpu | cuda | cuda:0
+half: true            # fp16 on CUDA for faster inference
+fuse_iou: 0.55        # IoU to merge boxes from different models
+nms_iou: 0.5
+min_support: 1        # require this many models to agree (raise to 2 for fewer false alarms)
+min_score: 0.30
+frame_stride: 2       # detect every 2nd frame, track in between (higher = faster)
+target_fps: 0         # 0 = unthrottled
+motion_fallback: true # use motion detection if no model weights load
+
+track_max_age: 30
+track_iou: 0.3
+track_min_hits: 3
+
+# Tell drones from birds by how they move (straight/uniform/hover = drone,
+# wandering/bobbing/flapping = bird). Classifies once a track has this much history.
+trajectory_classify: true
+trajectory_min_len: 8
+drones_only: false      # true: drop tracks judged to be birds from the output
+
+# Model ensemble. Point `weights` at drone-trained weights for best accuracy
+# (see README). Each model votes; agreement raises confidence.
+models:
+  # Small models for real-time speed. For max speed use ONE nano model
+  # (yolo11n). For more accuracy use yolo11m or yolo11x. Point weights at
+  # drone-trained weights for the best airspace accuracy.
+  - name: yolo11s
+    weights: yolo11s.pt       # or weights/drone_yolo11.pt
+    weight: 1.0
+    conf: 0.20
+    imgsz: 960
+  - name: yolov8s
+    weights: yolov8s.pt       # or weights/drone_yolov8.pt
+    weight: 0.8
+    conf: 0.20
+    imgsz: 960
+    # classes: [0]            # if your weight has a single 'drone' class, pin its id
+
+# Cameras loaded on startup (you can also add them live in the web UI).
+cameras:
+  - id: gate-north
+    name: North Gate
+    source: rtsp://user:pass@192.168.1.50:554/stream1
+    enabled: false
+  - id: file-demo
+    name: Demo Clip
+    source: data/samples/demo.mp4
+    enabled: false
