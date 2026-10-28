@@ -23,6 +23,7 @@ class MovingDetector:
 def _run(boxes, drones_only):
     cfg = Config.load(overrides={"frame_stride": 1, "min_support": 1, "min_score": 0.0})
     cfg.track_min_hits = 1
+    cfg.trajectory_classify = True        # these tests exercise motion-based bird/drone telling
     cfg.trajectory_min_len = 8
     cfg.drones_only = drones_only
     pipe = DetectionPipeline(Ensemble([MovingDetector(boxes)], min_support=1, min_score=0.0), cfg)

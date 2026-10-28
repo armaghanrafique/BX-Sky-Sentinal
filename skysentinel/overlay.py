@@ -17,19 +17,32 @@ DARK = (20, 24, 30)
 def draw_tracks(frame: np.ndarray, tracks: List[Track]) -> np.ndarray:
     import cv2
 
-    for t in tracks:
+    drawn = [t for t in tracks if getattr(t, "kind", "pending") != "bird"]
+    # A full "#id Drone/UAV 0.00" caption dwarfs a drone that is only a few pixels
+    # across, and a sky full of them becomes an unreadable wall of text. So the
+    # caption is only drawn in full beside a large, close target; small targets
+    # (the usual case) get just their id, and a dense swarm gets boxes alone. The
+    # HUD always shows the running total regardless.
+    big_label = len(drawn) <= 20
+
+    for t in drawn:
         kind = getattr(t, "kind", "pending")
-        if kind == "bird":            # birds are never drawn
-            continue
         x1, y1, x2, y2 = [int(v) for v in t.box]
+        size = max(x2 - x1, y2 - y1)
         # Confirmed drone is solid red; a not-yet-confirmed aerial target is amber.
         col = RED if kind == "drone" else AMBER
-        label = "Drone/UAV" if kind == "drone" else "Drone/UAV?"
-        cv2.rectangle(frame, (x1, y1), (x2, y2), col, 2)
-        tag = f"#{t.id} {label} {t.score:.2f}"
-        (tw, th), _ = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-        cv2.rectangle(frame, (x1, y1 - th - 6), (x1 + tw + 6, y1), col, -1)
-        cv2.putText(frame, tag, (x1 + 3, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, DARK, 1, cv2.LINE_AA)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), col, 2 if size >= 14 else 1)
+        if len(drawn) > 60:                   # dense swarm: boxes only, stay readable
+            continue
+        if big_label and size >= 34:
+            label = "Drone/UAV" if kind == "drone" else "Drone/UAV?"
+            tag, scale = f"#{t.id} {label} {t.score:.2f}", 0.5
+        else:
+            tag, scale = f"#{t.id}", 0.4      # compact id for small / numerous targets
+        (tw, th), _ = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, scale, 1)
+        ly = y1 - 4 if y1 - th - 6 >= 0 else y2 + th + 4      # flip below if no room above
+        cv2.rectangle(frame, (x1, ly - th - 2), (x1 + tw + 6, ly + 2), col, -1)
+        cv2.putText(frame, tag, (x1 + 3, ly), cv2.FONT_HERSHEY_SIMPLEX, scale, DARK, 1, cv2.LINE_AA)
     return frame
 
 

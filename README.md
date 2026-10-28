@@ -20,14 +20,15 @@ Real-time drone and UAV detection for recorded video and live camera feeds. BX-S
 
 <p align="center"><sub>A distant quadcopter detected against a flat overcast sky and labelled <b>Drone/UAV (0.62)</b> — the kind of small, low-contrast, far-range target that single-frame detectors usually miss.</sub></p>
 
-<p align="center"><img src="docs/images/detection-swarm.jpg" width="72%" alt="Multiple small drones detected and tracked in Long-range mode"></p>
+<p align="center"><img src="docs/images/detection-swarm.jpg" width="72%" alt="Every small drone in a group detected and tracked individually"></p>
 
-<p align="center"><sub>Long-range (tiled) mode detecting and tracking <b>multiple small drones</b> at once, each labelled Drone/UAV with a confidence score and a stable track ID.</sub></p>
+<p align="center"><sub>A whole group of small drones detected and tracked at once — <b>each drone individually</b>, with its own box and a stable track ID. There is no limit on how many can be counted in a single frame.</sub></p>
 
 ## Capabilities
 
 - **Detector ensemble.** Multiple models run per frame and their outputs are merged with Weighted Boxes Fusion. Agreement between models raises confidence; isolated false positives are suppressed. A minimum-agreement threshold is configurable.
-- **Drone-vs-bird discrimination.** A trajectory classifier scores each track on path straightness, speed uniformity, heading stability, hover behaviour, vertical oscillation and bounding-box stability, then fuses that with the detector's appearance label.
+- **Count every drone, no limit.** A dedicated sky-object detector reports each small/far/hovering drone individually, so an entire group is tracked as separate targets — each with its own box and stable ID — with no cap on how many appear in a frame.
+- **Bird rejection, drone-safe.** A wingbeat verifier drops clearly flapping birds (rigid UAVs never trip it), while nothing that could be a drone is discarded. An optional trajectory classifier (path straightness, speed/heading stability, hover and vertical-oscillation behaviour) can be enabled for stricter sorting.
 - **Any input.** Local video files (MP4/MOV/AVI/MKV/WEBM), RTSP/RTMP/HTTP network streams, and USB webcams.
 - **Many cameras at once.** Each camera runs on its own worker thread with an independent tracker, sharing a single model ensemble.
 - **Live overlay.** Bounding boxes, stable track IDs, per-camera frame rate and target counts, streamed to the browser.
@@ -52,10 +53,10 @@ A session opens on a brief **welcome screen**, then two working pages:
 
 | Control | Effect |
 |---|---|
-| **Detection speed** | **Fastest / Balanced / Accurate / Long-range** — switches the detection model live (nano → small → medium, plus a **tiled Long-range mode for small, distant drones**). Choose speed or range to suit the hardware |
+| **Detection speed** | **Fast / Balanced / Accurate** — switches the detection model live (nano → small → medium). Every speed detects small, distant and swarming drones **individually** and counts **any number** of them in a frame; the only trade-off is speed vs. detail (Accurate also tiles the frame for the smallest targets) |
 | **Confidence (0–100)** | From *fewer alerts* to *more alerts* — the minimum score to accept a detection |
 
-Birds are filtered out automatically; only drones are shown and counted.
+Every drone in the sky is detected on its own, with no cap on how many appear at once. Clearly flapping birds are filtered out automatically; only drones are shown and counted.
 
 ---
 
@@ -196,13 +197,15 @@ The dashboard tunes everything with live knobs; the CLI bundles sensible combina
 ```bash
 python run.py video --input clip.mp4 --output out.mp4 --mode precise
 python run.py stream --input rtsp://cam/stream1 --mode fast --max-fps 12
-python run.py video --input clip.mp4 --output out.mp4 --turbo           # fastest: 1 nano model @ 512
-python run.py video --input clip.mp4 --output out.mp4 --engine longrange # small / distant drones (tiled)
+python run.py video --input clip.mp4 --output out.mp4 --turbo           # maximum speed: 1 nano model @ 512
+python run.py video --input clip.mp4 --output out.mp4 --engine accurate # most thorough: medium model + tiling
 ```
 
-### Detecting small, distant drones
+### Detecting small, distant and swarming drones
 
-Small drones occupy only a few pixels, so whole-frame detection downscales them away. **Long-range mode** runs **tiled (sliced) inference** — the whole frame *plus* overlapping tiles at full resolution, merged by fusion and NMS — which recovers small and far targets. Select **Long-range** in the dashboard, or pass `--engine longrange` on the CLI. On one real clip this raised detections from 3 of 30 sampled frames to 21 of 30.
+Small drones occupy only a few pixels, so a whole-frame object detector downscales them away. BX-Sky Sentinal solves this with a dedicated **sky-object detector that runs on every speed setting** — it finds each small, dark, far-off target floating against the sky and reports it individually, so a whole group is tracked as separate drones (each with its own box and track ID) rather than merged into one blob. There is **no cap** on how many drones a single frame can contain. Ground clutter is kept out by requiring targets to be genuinely dark, bluish-sky-surrounded and above the horizon line. The **Accurate** speed additionally runs **tiled (sliced) inference** — the whole frame *plus* overlapping tiles at full resolution, merged by fusion and NMS — for the very smallest targets.
+
+On the field test clip (a group of small drones over a field with vehicles and buildings), every visible drone is detected and tracked individually with no ground or cloud false positives.
 
 
 

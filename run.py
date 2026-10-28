@@ -35,7 +35,7 @@ def cmd_video(a) -> int:
         cfg.apply_mode("fast")
         cfg.min_support = 1
     elif getattr(a, "engine", None):
-        cfg.apply_engine(a.engine)         # fastest | balanced | accurate | longrange
+        cfg.apply_engine(a.engine)         # fast | balanced | accurate
     elif getattr(a, "mode", None):
         cfg.apply_mode(a.mode)
     if a.max_fps is not None:
@@ -75,8 +75,8 @@ def main(argv=None) -> int:
         sp.add_argument("--config")
         sp.add_argument("--device")
         sp.add_argument("--mode", choices=["fast", "balanced", "precise"], help="performance preset")
-        sp.add_argument("--engine", choices=["fastest", "balanced", "accurate", "longrange", "swarm"],
-                        help="detection model (longrange = tiled small drones; swarm = motion-first, small movers)")
+        sp.add_argument("--engine", choices=["fast", "balanced", "accurate"],
+                        help="detection speed (all detect small / far / swarming drones individually)")
         sp.add_argument("--turbo", action="store_true", help="maximum speed: single nano model at 512px")
         sp.add_argument("--max-fps", type=float, dest="max_fps", help="cap processing FPS (0 = uncapped)")
         sp.add_argument("--stride", type=int)

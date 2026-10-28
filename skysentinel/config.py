@@ -39,43 +39,40 @@ PERF_MODES = {
     "precise":  {"frame_stride": 1, "imgsz": 1280, "target_fps": 0, "min_support": 2},
 }
 
-# Detection-speed presets that swap the actual model weights at runtime. One
-# model each, so switching is simple and predictable for the operator.
+# Detection-speed presets. Just Fast / Balanced / Accurate - a single speed
+# choice for the operator. Every one of them detects small, far and swarming
+# drones individually (the sky-object detector is always on and larger/closer
+# presets also tile the frame), so there is no separate "long-range" or "swarm"
+# mode to pick: it always works, and the only trade-off is speed vs. detail.
 ENGINE_PRESETS = {
-    "fastest":  {"label": "Fastest",  "weights": "yolo11n.pt", "imgsz": 512, "stride": 5},
-    "balanced": {"label": "Balanced", "weights": "yolo11s.pt", "imgsz": 640, "stride": 3},
-    "accurate": {"label": "Accurate", "weights": "yolo11m.pt", "imgsz": 960, "stride": 2},
-    "longrange": {"label": "Long-range", "weights": "yolo11m.pt", "imgsz": 640, "stride": 2,
-                  "tile": True, "tile_size": 416},
-    # Motion-first mode: every small object moving against the sky is detected
-    # individually (each gets its own box + track ID), so all drones in a group
-    # are picked up separately. The bird filter is off so nothing is dropped.
-    "swarm": {"label": "Small / multi-drone", "weights": "yolo11s.pt", "imgsz": 640, "stride": 1,
-              "sky_motion": True, "no_bird_filter": True, "appearance": False},
+    "fast":     {"label": "Fast",     "weights": "yolo11n.pt", "imgsz": 640, "stride": 2},
+    "balanced": {"label": "Balanced", "weights": "yolo11s.pt", "imgsz": 960, "stride": 2},
+    "accurate": {"label": "Accurate", "weights": "yolo11m.pt", "imgsz": 960, "stride": 1,
+                 "tile": True, "tile_size": 416},
 }
 
 
 @dataclass
 class Config:
     mode: str = "balanced"               # fast | balanced | precise (see PERF_MODES)
-    engine: str = "balanced"             # fastest | balanced | accurate (swaps weights)
+    engine: str = "balanced"             # fast | balanced | accurate (swaps weights)
     device: str = "auto"                 # auto | cpu | cuda | cuda:0 ...
     half: bool = True                    # fp16 on CUDA for speed
     fuse_iou: float = 0.55
     nms_iou: float = 0.5
     min_support: int = 1                 # min number of models that must agree
     min_score: float = 0.20              # lower -> catches smaller / far-off targets
-    max_det: int = 100
+    max_det: int = 100000                # effectively uncapped: count every drone in frame
     frame_stride: int = 1                # run detection every Nth frame; track in between
     target_fps: int = 0                  # 0 = as fast as possible
     motion_fallback: bool = True         # use motion detector when no model weight loads
-    sky_motion: bool = False             # add the sky-object detector (small dark sky targets = drones)
+    sky_motion: bool = True              # add the sky-object detector (small dark sky targets = drones)
     use_appearance: bool = True          # run the YOLO model(s); off = sky-detector only (no ground clutter)
     track_max_age: int = 30
     track_iou: float = 0.3
-    track_min_hits: int = 3
-    track_max_dist: float = 90.0         # px gate for matching fast small movers by centroid
-    trajectory_classify: bool = True     # tell drones from birds by how they move
+    track_min_hits: int = 2
+    track_max_dist: float = 140.0        # px gate for matching fast small movers by centroid
+    trajectory_classify: bool = False    # tell drones from birds by how they move
     trajectory_min_len: int = 8          # frames of history before judging motion
     flap_verify: bool = True             # second check: reject wing-flapping birds
     flap_min_len: int = 10               # frames of history before judging flapping
@@ -120,14 +117,16 @@ class Config:
                                    tile=preset.get("tile", False), tile_size=preset.get("tile_size", 416))]
         self.frame_stride = preset["stride"]
         self.min_support = 1
-        self.sky_motion = preset.get("sky_motion", False)
-        self.use_appearance = preset.get("appearance", True)
-        if preset.get("no_bird_filter"):
-            # motion-first mode: treat every small sky mover as a drone
-            self.trajectory_classify = False
-            self.flap_verify = False
-            self.track_min_hits = 2
-            self.track_max_dist = 140.0
+        # Every speed picks up small / far / swarming drones: the sky-object
+        # detector is always on, and a confirmed aerial target shows up quickly
+        # and is not thrown away by motion classification (only a clear wingbeat
+        # rejects it as a bird), so no visible drone is silently dropped.
+        self.sky_motion = True
+        self.use_appearance = True
+        self.trajectory_classify = False
+        self.flap_verify = True
+        self.track_min_hits = 2
+        self.track_max_dist = 140.0
         return self
 
     def apply_mode(self, mode: str) -> "Config":

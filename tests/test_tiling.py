@@ -25,13 +25,16 @@ def test_overlap_creates_multiple_tiles():
     assert len(d._tiles(1280, 720)) > 1
 
 
-def test_longrange_engine_enables_tiling():
-    cfg = Config.load().apply_engine("longrange")
+def test_accurate_tiles_for_small_drones():
+    cfg = Config.load().apply_engine("accurate")
     assert cfg.models[0].tile is True
-    assert "longrange" in ENGINE_PRESETS
+    assert "accurate" in ENGINE_PRESETS
 
 
-def test_other_engines_do_not_tile():
-    for e in ("fastest", "balanced", "accurate"):
+def test_every_engine_detects_small_drones_without_a_separate_mode():
+    # No "long-range" / "swarm" button: all speeds run the sky-object detector
+    # and are uncapped, so any number of small drones is caught.
+    for e in ("fast", "balanced", "accurate"):
         cfg = Config.load().apply_engine(e)
-        assert cfg.models[0].tile is False
+        assert cfg.sky_motion is True
+        assert cfg.max_det >= 100000

@@ -59,23 +59,21 @@ class DetectionPipeline:
         else:
             dets = self._last_det
         tracks = self.tracker.update(dets.boxes, dets.scores, dets.labels)
-        if self.classifier is not None or self.flap is not None:
-            for t in tracks:
-                if self.classifier is not None:
-                    prof = self.classifier.profile(t.history)
-                    t.kind, t.kind_score = prof.kind, prof.score
-                # Second check: a clear wingbeat oscillation overrules everything
-                # and marks the target a bird (rigid UAVs never trip this).
-                if self.flap is not None:
-                    t.flap = self.flap.strength(t.history)
-                    if t.flap >= self.cfg.flap_strength:
-                        t.kind, t.kind_score = "bird", max(t.kind_score, t.flap)
-            if self.cfg.drones_only:
-                tracks = [t for t in tracks if t.kind != "bird"]
-        else:
-            # Motion-first mode (no bird filter): every confirmed track is a drone.
-            for t in tracks:
+        for t in tracks:
+            if self.classifier is not None:
+                prof = self.classifier.profile(t.history)
+                t.kind, t.kind_score = prof.kind, prof.score
+            else:
+                # No motion classification: every confirmed aerial target is a drone.
                 t.kind = "drone"
+            # A clear wingbeat oscillation overrules everything and marks the
+            # target a bird (rigid UAVs never trip this).
+            if self.flap is not None:
+                t.flap = self.flap.strength(t.history)
+                if t.flap >= self.cfg.flap_strength:
+                    t.kind, t.kind_score = "bird", max(t.kind_score, t.flap)
+        if self.cfg.drones_only:
+            tracks = [t for t in tracks if t.kind != "bird"]
         self._tick_fps()
         if draw:
             draw_tracks(frame, tracks)
