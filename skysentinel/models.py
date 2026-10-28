@@ -13,6 +13,7 @@ from .config import Config, ModelConfig
 from .detector import YoloDetector
 from .ensemble import Ensemble
 from .motion import MotionDetector
+from .skymotion import SkyMotionDetector
 
 log = logging.getLogger("skysentinel.models")
 
@@ -28,15 +29,30 @@ class MotionAdapter:
         return self._m.detect(frame)
 
 
+class SkyMotionAdapter:
+    """Sky-motion detector as an ensemble member (small sky movers = drones)."""
+
+    def __init__(self, weight: float = 1.0):
+        self._m = SkyMotionDetector()
+        self.cfg = ModelConfig(name="sky-motion", weights="(sky-motion)", weight=weight, conf=0.0)
+
+    def detect(self, frame):
+        return self._m.detect(frame)
+
+
 def build_detectors(cfg: Config) -> List:
     detectors = []
-    for m in cfg.enabled_models():
-        d = YoloDetector(m, device=cfg.device, half=cfg.half)
-        if d.load():
-            log.info("loaded model %s (%s) on %s", m.name, m.weights, d.device)
-            detectors.append(d)
-        else:
-            log.warning("could not load model %s (%s) - skipping", m.name, m.weights)
+    if cfg.use_appearance:
+        for m in cfg.enabled_models():
+            d = YoloDetector(m, device=cfg.device, half=cfg.half)
+            if d.load():
+                log.info("loaded model %s (%s) on %s", m.name, m.weights, d.device)
+                detectors.append(d)
+            else:
+                log.warning("could not load model %s (%s) - skipping", m.name, m.weights)
+    if cfg.sky_motion:
+        log.info("sky-motion detector enabled (small sky movers treated as drones)")
+        detectors.append(SkyMotionAdapter())
     if not detectors and cfg.motion_fallback:
         log.warning("no neural models available - using motion-detection fallback")
         detectors.append(MotionAdapter())

@@ -35,7 +35,7 @@ class DetectionPipeline:
         self.ensemble = ensemble
         self.cfg = cfg
         self.name = name
-        self.tracker = IoUTracker(cfg.track_max_age, cfg.track_iou, cfg.track_min_hits)
+        self.tracker = IoUTracker(cfg.track_max_age, cfg.track_iou, cfg.track_min_hits, cfg.track_max_dist)
         self.classifier = TrajectoryClassifier(min_len=cfg.trajectory_min_len) if cfg.trajectory_classify else None
         self.flap = FlapVerifier(cfg.flap_min_len, cfg.flap_strength) if cfg.flap_verify else None
         self._i = 0
@@ -72,6 +72,10 @@ class DetectionPipeline:
                         t.kind, t.kind_score = "bird", max(t.kind_score, t.flap)
             if self.cfg.drones_only:
                 tracks = [t for t in tracks if t.kind != "bird"]
+        else:
+            # Motion-first mode (no bird filter): every confirmed track is a drone.
+            for t in tracks:
+                t.kind = "drone"
         self._tick_fps()
         if draw:
             draw_tracks(frame, tracks)

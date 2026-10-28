@@ -47,6 +47,11 @@ ENGINE_PRESETS = {
     "accurate": {"label": "Accurate", "weights": "yolo11m.pt", "imgsz": 960, "stride": 2},
     "longrange": {"label": "Long-range", "weights": "yolo11m.pt", "imgsz": 640, "stride": 2,
                   "tile": True, "tile_size": 416},
+    # Motion-first mode: every small object moving against the sky is detected
+    # individually (each gets its own box + track ID), so all drones in a group
+    # are picked up separately. The bird filter is off so nothing is dropped.
+    "swarm": {"label": "Small / multi-drone", "weights": "yolo11s.pt", "imgsz": 640, "stride": 1,
+              "sky_motion": True, "no_bird_filter": True, "appearance": False},
 }
 
 
@@ -64,9 +69,12 @@ class Config:
     frame_stride: int = 1                # run detection every Nth frame; track in between
     target_fps: int = 0                  # 0 = as fast as possible
     motion_fallback: bool = True         # use motion detector when no model weight loads
+    sky_motion: bool = False             # add the sky-object detector (small dark sky targets = drones)
+    use_appearance: bool = True          # run the YOLO model(s); off = sky-detector only (no ground clutter)
     track_max_age: int = 30
     track_iou: float = 0.3
     track_min_hits: int = 3
+    track_max_dist: float = 90.0         # px gate for matching fast small movers by centroid
     trajectory_classify: bool = True     # tell drones from birds by how they move
     trajectory_min_len: int = 8          # frames of history before judging motion
     flap_verify: bool = True             # second check: reject wing-flapping birds
@@ -112,6 +120,14 @@ class Config:
                                    tile=preset.get("tile", False), tile_size=preset.get("tile_size", 416))]
         self.frame_stride = preset["stride"]
         self.min_support = 1
+        self.sky_motion = preset.get("sky_motion", False)
+        self.use_appearance = preset.get("appearance", True)
+        if preset.get("no_bird_filter"):
+            # motion-first mode: treat every small sky mover as a drone
+            self.trajectory_classify = False
+            self.flap_verify = False
+            self.track_min_hits = 2
+            self.track_max_dist = 140.0
         return self
 
     def apply_mode(self, mode: str) -> "Config":

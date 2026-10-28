@@ -75,8 +75,8 @@ def main(argv=None) -> int:
         sp.add_argument("--config")
         sp.add_argument("--device")
         sp.add_argument("--mode", choices=["fast", "balanced", "precise"], help="performance preset")
-        sp.add_argument("--engine", choices=["fastest", "balanced", "accurate", "longrange"],
-                        help="detection model (longrange = tiled, best for small drones)")
+        sp.add_argument("--engine", choices=["fastest", "balanced", "accurate", "longrange", "swarm"],
+                        help="detection model (longrange = tiled small drones; swarm = motion-first, small movers)")
         sp.add_argument("--turbo", action="store_true", help="maximum speed: single nano model at 512px")
         sp.add_argument("--max-fps", type=float, dest="max_fps", help="cap processing FPS (0 = uncapped)")
         sp.add_argument("--stride", type=int)
