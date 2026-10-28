@@ -1,12 +1,12 @@
-# SkySentinel
+# BX-Sky Sentinal
 
 ![Python](https://img.shields.io/badge/python-3.9%2B-3776AB)
 ![Models](https://img.shields.io/badge/detection-YOLO11%20%2B%20YOLOv8%20ensemble-2fd0e0)
 ![Interface](https://img.shields.io/badge/interface-web%20%2B%20CLI-35e08b)
-![Tests](https://img.shields.io/badge/tests-54%20passing-35e08b)
+![Tests](https://img.shields.io/badge/tests-59%20passing-35e08b)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-Real-time drone and UAV detection for recorded video and live camera feeds. SkySentinel combines an ensemble of object detectors with motion-trajectory analysis, so it not only spots small objects in the sky but also separates **drones from birds** by the way they move. It ingests MP4 files or multiple RTSP/RTMP CCTV streams at once and overlays tracked targets on a live dashboard.
+Real-time drone and UAV detection for recorded video and live camera feeds. BX-Sky Sentinal combines an ensemble of object detectors with motion-trajectory analysis, so it not only spots small objects in the sky but also separates **drones from birds** by the way they move. It ingests MP4 files or multiple RTSP/RTMP CCTV streams at once and overlays tracked targets on a live dashboard.
 
 ![Live cameras dashboard](docs/images/live.png)
 
@@ -16,9 +16,13 @@ Real-time drone and UAV detection for recorded video and live camera feeds. SkyS
 
 ## Detection in action
 
-<p align="center"><img src="docs/images/detection-sample.jpg" width="62%" alt="SkySentinel detecting a distant quadcopter against an overcast sky"></p>
+<p align="center"><img src="docs/images/detection-sample.jpg" width="62%" alt="BX-Sky Sentinal detecting a distant quadcopter against an overcast sky"></p>
 
 <p align="center"><sub>A distant quadcopter detected against a flat overcast sky and labelled <b>Drone/UAV (0.62)</b> — the kind of small, low-contrast, far-range target that single-frame detectors usually miss.</sub></p>
+
+<p align="center"><img src="docs/images/detection-swarm.jpg" width="72%" alt="Multiple small drones detected and tracked in Long-range mode"></p>
+
+<p align="center"><sub>Long-range (tiled) mode detecting and tracking <b>multiple small drones</b> at once, each labelled Drone/UAV with a confidence score and a stable track ID.</sub></p>
 
 ## Capabilities
 
@@ -42,14 +46,14 @@ A session opens on a brief **welcome screen**, then two working pages:
 
 > Note: an image is a single frame, so the motion-based bird/drone checks don't apply to it — the annotated image shows every aerial-target detection the model reports.
 
-**Connecting cameras is automatic.** On the Live Cameras page, enter the camera username and password and press **Scan network** — SkySentinel discovers ONVIF/RTSP cameras on the LAN (including ones plugged into the laptop over Ethernet), resolves each stream itself, and offers them to add with one click. A manual option (RTSP/RTMP link or webcam number) is tucked away for the rare case it's needed.
+**Connecting cameras is automatic.** On the Live Cameras page, enter the camera username and password and press **Scan network** — BX-Sky Sentinal discovers ONVIF/RTSP cameras on the LAN (including ones plugged into the laptop over Ethernet), resolves each stream itself, and offers them to add with one click. A manual option (RTSP/RTMP link or webcam number) is tucked away for the rare case it's needed.
 
 **Two simple controls**, applied instantly with no restart:
 
 | Control | Effect |
 |---|---|
-| **Detection speed** | **Fastest / Balanced / Accurate** — switches the detection model live (nano → small → medium). Choose speed or accuracy to suit the hardware |
-| **Sensitivity** | From *fewer alerts* to *more alerts* (detection confidence) |
+| **Detection speed** | **Fastest / Balanced / Accurate / Long-range** — switches the detection model live (nano → small → medium, plus a **tiled Long-range mode for small, distant drones**). Choose speed or range to suit the hardware |
+| **Confidence (0–100)** | From *fewer alerts* to *more alerts* — the minimum score to accept a detection |
 
 Birds are filtered out automatically; only drones are shown and counted.
 
@@ -136,7 +140,7 @@ For GPU acceleration, install a CUDA build of PyTorch before the other requireme
 
 ### Model weights
 
-The ensemble defaults to `yolo11x.pt` and `yolov8x.pt`, which Ultralytics downloads on first use. These are strong general detectors; for production airspace accuracy, point the configuration at **drone-trained weights** and pin the class if the weight has a single `drone` label:
+The detection-speed presets use `yolo11n/s/m`, which Ultralytics downloads on first use. These are general detectors; for production airspace accuracy, point the configuration at **drone-trained weights** and pin the class if the weight has a single `drone` label:
 
 ```yaml
 models:
@@ -151,7 +155,7 @@ models:
 sequenceDiagram
     participant U as Operator
     participant B as Browser
-    participant A as SkySentinel server
+    participant A as BX-Sky Sentinal server
     participant M as Camera manager
 
     U->>B: Open dashboard
@@ -192,8 +196,13 @@ The dashboard tunes everything with live knobs; the CLI bundles sensible combina
 ```bash
 python run.py video --input clip.mp4 --output out.mp4 --mode precise
 python run.py stream --input rtsp://cam/stream1 --mode fast --max-fps 12
-python run.py video --input clip.mp4 --output out.mp4 --turbo    # fastest: 1 nano model @ 512
+python run.py video --input clip.mp4 --output out.mp4 --turbo           # fastest: 1 nano model @ 512
+python run.py video --input clip.mp4 --output out.mp4 --engine longrange # small / distant drones (tiled)
 ```
+
+### Detecting small, distant drones
+
+Small drones occupy only a few pixels, so whole-frame detection downscales them away. **Long-range mode** runs **tiled (sliced) inference** — the whole frame *plus* overlapping tiles at full resolution, merged by fusion and NMS — which recovers small and far targets. Select **Long-range** in the dashboard, or pass `--engine longrange` on the CLI. On one real clip this raised detections from 3 of 30 sampled frames to 21 of 30.
 
 
 
