@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SkySentinel — Video</title>
+  <title>BX-Sky Sentinal — Video</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -11,7 +11,7 @@
   <div class="splash" id="splash">
     <div class="splash-inner">
       <div class="splash-mark"></div>
-      <h1 class="splash-title">SKY<span>SENTINEL</span></h1>
+      <h1 class="splash-title">BX <span>SKY SENTINEL</span></h1>
       <div class="splash-sub">Drone &amp; UAV Detection</div>
       <div class="splash-rule"></div>
       <div class="splash-barwrap"><div class="splash-bar" id="splashBar"></div></div>
@@ -19,7 +19,7 @@
   </div>
 
   <header class="bar">
-    <div class="brand">SKY<span>SENTINEL</span></div>
+    <div class="brand">BX <span>SKY SENTINEL</span></div>
     <nav><a href="/" class="active">Video</a><a href="/live">Live Cameras</a></nav>
   </header>
 
@@ -38,8 +38,8 @@
           <div class="seg" id="engine"></div>
         </div>
         <div class="field">
-          <span class="lbl">Sensitivity</span>
-          <input type="range" id="sens" min="0.05" max="0.95" step="0.05">
+          <span class="lbl">Confidence <b id="sensVal"></b></span>
+          <input type="range" id="sens" min="5" max="95" step="5">
           <div class="scale"><span>Fewer alerts</span><span>More alerts</span></div>
         </div>
       </div>

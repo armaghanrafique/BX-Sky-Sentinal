@@ -80,7 +80,7 @@ def create_app(config_path: Optional[str] = None) -> Flask:
     ensemble = build_ensemble(cfg)
     manager = CameraManager(ensemble, cfg)
     manager.start_all()
-    log.info("SkySentinel ready | engine=%s | device=%s | drones-only", cfg.engine, cfg.device)
+    log.info("BX-Sky Sentinal ready | engine=%s | device=%s | drones-only", cfg.engine, cfg.device)
 
     engine_lock = threading.Lock()
     discover_state = {"scanning": False, "cameras": [], "message": ""}
@@ -307,5 +307,5 @@ def create_app(config_path: Optional[str] = None) -> Flask:
 
 if __name__ == "__main__":
     app = create_app()
-    print("\n  SkySentinel is running — open:\n\n      http://localhost:5000\n")
+    print("\n  BX-Sky Sentinal is running — open:\n\n      http://localhost:5000\n")
     app.run(host="0.0.0.0", port=5000, threaded=True)

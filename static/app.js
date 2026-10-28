@@ -28,13 +28,19 @@ const SkySentinel = (() => {
     }));
   }
 
-  async function initSensitivity(onChange) {
-    const el = $("sens"); if (!el) return;
-    try { el.value = (await (await fetch("/api/controls")).json()).confidence; } catch {}
-    const push = () => fetch("/api/controls", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ confidence: parseFloat(el.value) }) }).catch(() => {});
-    el.addEventListener("change", push);
+  // Confidence shown 0-100 in the UI; the backend works in 0-1.
+  async function initSensitivity() {
+    const el = $("sens"), out = $("sensVal"); if (!el) return;
+    const show = () => { if (out) out.textContent = el.value; };
+    try { el.value = Math.round((await (await fetch("/api/controls")).json()).confidence * 100); } catch {}
+    show();
+    el.addEventListener("input", show);
+    el.addEventListener("change", () => fetch("/api/controls", { method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confidence: parseInt(el.value) / 100 }) }).catch(() => {}));
   }
+
+  const confValue = () => parseInt($("sens").value) / 100;
 
   // ---- siren ----
   let soundOn = true, actx = null, osc = null, lfo = null, sirenOn = false;
@@ -70,7 +76,7 @@ const SkySentinel = (() => {
       go.disabled = true; $("prog").classList.remove("hidden"); $("result").classList.add("hidden");
       const fd = new FormData(); fd.append("video", chosen);
       fd.append("engine", [...$("engine").children].find((b) => b.classList.contains("active"))?.dataset.e || "");
-      fd.append("confidence", $("sens").value);
+      fd.append("confidence", confValue());
       let res; try { res = await (await fetch("/api/upload", { method: "POST", body: fd })).json(); } catch { return fail("Upload failed"); }
       if (res.error) return fail(res.error);
       poll(res.job_id);

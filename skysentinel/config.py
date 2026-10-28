@@ -18,6 +18,9 @@ class ModelConfig:
     imgsz: int = 1280
     enabled: bool = True
     classes: Optional[List[int]] = None  # restrict to these class ids, if the weight is multi-class
+    tile: bool = False                   # sliced inference for small / far targets
+    tile_size: int = 416                 # tile edge in pixels
+    tile_overlap: float = 0.2            # fractional overlap between tiles
 
 
 @dataclass
@@ -42,6 +45,8 @@ ENGINE_PRESETS = {
     "fastest":  {"label": "Fastest",  "weights": "yolo11n.pt", "imgsz": 512, "stride": 5},
     "balanced": {"label": "Balanced", "weights": "yolo11s.pt", "imgsz": 640, "stride": 3},
     "accurate": {"label": "Accurate", "weights": "yolo11m.pt", "imgsz": 960, "stride": 2},
+    "longrange": {"label": "Long-range", "weights": "yolo11m.pt", "imgsz": 640, "stride": 2,
+                  "tile": True, "tile_size": 416},
 }
 
 
@@ -103,7 +108,8 @@ class Config:
         self.engine = engine
         keep = self.models[0] if self.models else ModelConfig(name="model", weights=preset["weights"])
         self.models = [ModelConfig(name=engine, weights=preset["weights"], weight=1.0,
-                                   conf=keep.conf, imgsz=preset["imgsz"], classes=keep.classes)]
+                                   conf=keep.conf, imgsz=preset["imgsz"], classes=keep.classes,
+                                   tile=preset.get("tile", False), tile_size=preset.get("tile_size", 416))]
         self.frame_stride = preset["stride"]
         self.min_support = 1
         return self

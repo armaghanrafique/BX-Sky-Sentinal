@@ -34,6 +34,8 @@ def cmd_video(a) -> int:
         cfg.models = [ModelConfig(name="yolo11n", weights="yolo11n.pt", weight=1.0, conf=0.20, imgsz=512)]
         cfg.apply_mode("fast")
         cfg.min_support = 1
+    elif getattr(a, "engine", None):
+        cfg.apply_engine(a.engine)         # fastest | balanced | accurate | longrange
     elif getattr(a, "mode", None):
         cfg.apply_mode(a.mode)
     if a.max_fps is not None:
@@ -54,7 +56,7 @@ def cmd_web(a) -> int:
 
     app = create_app(a.config)
     url = f"http://localhost:{a.port}"
-    print("\n  SkySentinel is running — open:\n")
+    print("\n  BX-Sky Sentinal is running — open:\n")
     print(f"      {url}\n")
     logging.getLogger("skysentinel.web").info("serving on %s (press Ctrl+C to stop)", url)
     app.run(host=a.host, port=a.port, threaded=True)
@@ -73,6 +75,8 @@ def main(argv=None) -> int:
         sp.add_argument("--config")
         sp.add_argument("--device")
         sp.add_argument("--mode", choices=["fast", "balanced", "precise"], help="performance preset")
+        sp.add_argument("--engine", choices=["fastest", "balanced", "accurate", "longrange"],
+                        help="detection model (longrange = tiled, best for small drones)")
         sp.add_argument("--turbo", action="store_true", help="maximum speed: single nano model at 512px")
         sp.add_argument("--max-fps", type=float, dest="max_fps", help="cap processing FPS (0 = uncapped)")
         sp.add_argument("--stride", type=int)
